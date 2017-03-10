@@ -1,0 +1,18 @@
+PODS:
+  - leveldb-library (1.18.2)
+  - Objective-LevelDB (2.1.5):
+    - leveldb-library (~> 1.18.2)
+  - ZWModel (1.0.0)
+
+DEPENDENCIES:
+  - Objective-LevelDB
+  - ZWModel
+
+SPEC CHECKSUMS:
+  leveldb-library: ef0453697c0fda3a9e550e5650e52976e6724548
+  Objective-LevelDB: fa075efd9d0be645aee51847cc3ee70cdadb80ce
+  ZWModel: 0bb177de819249404c2a0635204cc7bd7f72adf1
+
+PODFILE CHECKSUM: 1218723de30c7a4e276295fa734852750eec8c74
+
+COCOAPODS: 1.2.0
