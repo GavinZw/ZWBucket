@@ -9,7 +9,7 @@
 Pod::Spec.new do |spec|
 
 spec.name         = 'ZWBucket'
-spec.summary      = 'An Objective-C database library built over Google's LevelDB.'
+spec.summary      = 'An Objective-C database library built over Google LevelDB.'
 spec.version      = '1.0.0'
 spec.license      =  { :type => 'MIT', :file => 'LICENSE' }
 spec.authors      = { 'gavin' => 'lovegavin@outlook.com' }
