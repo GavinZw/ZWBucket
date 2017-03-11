@@ -32,25 +32,60 @@ NSString *const kSkyLoggedUser = @"sky_logged_credential";
 
 - (void)testZWBucket{
  
+  dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    [self testBucket:@"queue1"];
+  });
   
-  for (int i = 0; i < 10000; i++) {
-    @autoreleasepool {
-       ZWModel *model = [ZWModel new];
-      model.number = [NSNumber numberWithInt:i];
+  dispatch_async(dispatch_get_global_queue(0, 0), ^{
+   [self testBucket:@"queue2"];
+  });
+  
+  dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    [self testBucket:@"queue3"];
+  });
+  
+  
+  dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    [self testBucket:@"queue4"];
+  });
+}
 
-      ZWBucket.userDefault.set(kSkyLoggedUser,@{@"email":@"lovegavin@outlook.com",
+- (void)testBucket:(NSString *)key{
+  for (int i = 0; i < 1000000; i++) {
+    @autoreleasepool {
+      
+      ZWModel *model = [ZWModel new];
+      model.index = [NSString stringWithFormat:@"%@_%d",key,i];
+      
+      ZWBucket.userDefault.set(key,@{@"email":@"lovegavin@outlook.com",
                                                 @"password":model});
       
-      NSDictionary *user = ZWBucket.userDefault.get(kSkyLoggedUser);
+      NSDictionary *user = ZWBucket.userDefault.get(key);
       
       ZWModel *res = user[@"password"];
-      NSLog(@"***********get: %@",res.number);
+      NSLog(@"***********get: %@",res.index);
       
-      ZWBucket.userDefault.rm(kSkyLoggedUser);
-      NSLog(@"***********remove: %@",ZWBucket.userDefault.get(kSkyLoggedUser));
+      ZWBucket.userDefault.rm(key);
+      NSLog(@"***********remove: %@",ZWBucket.userDefault.get(key));
+      
+      
+//      ZWModel *model = [ZWModel new];
+//      model.number = [NSNumber numberWithInt:i];
+//      
+//      ZWBucket.userDefault.set(kSkyLoggedUser,@{@"email":@"lovegavin@outlook.com",
+//                                                @"password":model});
+//      
+//      NSDictionary *user = ZWBucket.userDefault.get(kSkyLoggedUser);
+//      
+//      ZWModel *res = user[@"password"];
+//      NSLog(@"***********get: %@",res.number);
+//      
+//      ZWBucket.userDefault.rm(kSkyLoggedUser);
+//      NSLog(@"***********remove: %@",ZWBucket.userDefault.get(kSkyLoggedUser));
     }
   }
 }
+
 
 - (void)didReceiveMemoryWarning {
   [super didReceiveMemoryWarning];

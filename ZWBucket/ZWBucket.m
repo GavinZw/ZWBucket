@@ -12,11 +12,8 @@
 static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 
 @interface ZWBucket () {
-  dispatch_queue_t _lvldb_bucker_queue;
   LevelDB *_ldb;
 }
-
-@property (nonatomic, strong) NSMutableDictionary *memory_ldb;
 
 @end
 
@@ -46,12 +43,10 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 #pragma mark - lifecycle
 
 - (instancetype)initWithName:(NSString *)name encrypt:(BOOL)encrypt{
+  if (name.length == 0) return nil;
   self = [super init];
   if (self) {
-     NSParameterAssert(name && ![name isEqualToString:@""]);
     _name = [name copy];
-    _lvldb_bucker_queue = dispatch_queue_create("com.gavin.create_DB", DISPATCH_QUEUE_SERIAL);
-    _memory_ldb = @{}.mutableCopy;
     
     //db options
     LevelDBOptions opts = [LevelDB makeOptions];
@@ -67,9 +62,7 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
       NSString *dbFile = [_name stringByAppendingPathExtension:@"ldb"];
       NSString *dbPath = [docPath stringByAppendingPathComponent:dbFile];
       
-      dispatch_sync(_lvldb_bucker_queue, ^{
        _ldb = [[LevelDB alloc] initWithPath:dbPath name:_name andOptions:opts];
-      });
       [_ldb removeAllObjects];
       
       _ldb.encoder = ^ NSData * (LevelDBKey *key, id object) {
@@ -104,10 +97,10 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 - (id (^)(NSString *))get {
   static id(^sc)();
   if (!sc) {
+     __weak typeof(self) _self = self;
     sc = ^id(NSString *k) {
-      @autoreleasepool {
-        return [self itemForKey:k];
-      }
+      __strong typeof(_self) self = _self;
+      return [self itemForKey:k];
     };
   }
   return sc;
@@ -116,10 +109,10 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 - (void (^)(NSString *, id))set {
   static void(^sc)();
   if (!sc) {
+    __weak typeof(self) _self = self;
     sc = ^(NSString *k, id v) {
-      @autoreleasepool {
-         return [self setItem:v forKey:k];
-      }
+      __strong typeof(_self) self = _self;
+      return [self setItem:v forKey:k];
     };
   }
   return sc;
@@ -128,10 +121,10 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 - (void (^)(NSString *))rm {
   static void(^sc)();
   if (!sc) {
+     __weak typeof(self) _self = self;
     sc = ^(NSString *k) {
-      @autoreleasepool {
-        return [self removeItemForKey:k];
-      }
+      __strong typeof(_self) self = _self;
+      return [self removeItemForKey:k];
     };
   }
   return sc;
@@ -141,37 +134,11 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 #pragma mark - private func
 
 #pragma mark -
-#pragma mark - Memory Cache
-
-+ (void)setObjectToMemory:(id)object forKey:(NSString *)key{
-  NSParameterAssert(key && object);
-  @synchronized (self) {
-    if (object && key) {
-      [self.userDefault.memory_ldb setObject:object forKey:key];
-    }
-  }
-}
-
-+ (id)objectFromMemoryForkey:(NSString *)key{
-  NSParameterAssert(key);
-  @synchronized (self){
-    return [self.userDefault.memory_ldb objectForKey:key];
-  }
-}
-
-+ (void)removeObjectFromMemoryForKey:(NSString *)key{
-  NSParameterAssert(key);
-  @synchronized (self){
-    [self.userDefault.memory_ldb removeObjectForKey:key];
-  }
-}
-
-#pragma mark -
-#pragma mark - LocalCache
+#pragma mark - public Cache
 
 - (void)setItem:(id)aItem forKey:(NSString *)key {
-  NSParameterAssert(aItem && key && ![key isEqualToString:@""]);
-  dispatch_barrier_async(_lvldb_bucker_queue, ^{
+  if (!key) return;
+  dispatch_barrier_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     @autoreleasepool{
       [self->_ldb setObject:aItem forKey:key];
     }
@@ -179,9 +146,9 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 }
 
 - (id)itemForKey:(NSString *)key {
-  NSParameterAssert(key);
+  if (!key) return nil;
   __block id item = nil;
-  dispatch_sync(_lvldb_bucker_queue, ^{
+  dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     @autoreleasepool{
       item = [self->_ldb objectForKey:key];
     }
@@ -190,8 +157,8 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 }
 
 - (void)removeItemForKey:(NSString *)key {
-  NSParameterAssert(key);
-  dispatch_barrier_async(_lvldb_bucker_queue, ^{
+  if (!key) return;
+  dispatch_barrier_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
      @autoreleasepool{
       [self->_ldb removeObjectForKey:key];
      }
@@ -199,10 +166,11 @@ static NSString *const kDatabaseFilenName = @"com.gavin.userDefault";
 }
 
 - (BOOL)close{
-  [_ldb close];
-  [_ldb deleteDatabaseFromDisk];
-  
-  return _ldb.closed;
+  @synchronized (self) {
+    [_ldb close];
+    [_ldb deleteDatabaseFromDisk];
+    return _ldb.closed;
+  }
 }
 
 @end
